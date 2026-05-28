@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>50. Jubilejni Spust po Krki · 2026</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--navy:#0d2a4f;--ocean:#1a5276;--teal:#0d6e6e;--sky:#3b9edd;--mint:#0d9488;--slate:#475569;--muted:#64748b;--light:#f0f7ff;--border:#dbeafe;--white:#fff;--red:#dc2626;--green:#16a34a;--amber:#d97706}
+    body{font-family:'DM Sans',sans-serif;background:linear-gradient(160deg,#e8f4fd 0%,#f0f9f4 50%,#e8f0fd 100%);min-height:100vh;color:var(--navy)}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--light)}::-webkit-scrollbar-thumb{background:#93c5fd;border-radius:4px}
+    /* screens */
+    #loading-screen,#login-screen{position:fixed;inset:0;z-index:1000;background:linear-gradient(160deg,var(--navy) 0%,var(--ocean) 55%,var(--teal) 100%);display:flex;align-items:center;justify-content:center;padding:24px}
+    #loading-screen{flex-direction:column;gap:16px}
+    .spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .9s linear infinite}
+    /* login */
+    .login-card{background:rgba(255,255,255,.97);border-radius:24px;box-shadow:0 32px 80px rgba(0,0,0,.35);width:100%;max-width:400px;padding:44px 40px 36px;animation:fadeUp .4s ease both}
+    .login-logo{display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy),var(--teal));border-radius:18px;padding:14px 18px;margin-bottom:18px;box-shadow:0 8px 24px rgba(13,42,79,.25)}
+    /* header */
+    header{background:linear-gradient(135deg,var(--navy) 0%,var(--ocean) 60%,var(--teal) 100%);color:#fff;position:relative;overflow:hidden}
+    .header-inner{max-width:1200px;margin:0 auto;padding:28px 24px 40px;position:relative}
+    .header-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .header-logo{background:rgba(255,255,255,.12);border-radius:16px;padding:10px 14px;backdrop-filter:blur(4px)}
+    .header-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px}
+    .stat-card{background:rgba(255,255,255,.1);backdrop-filter:blur(6px);border-radius:12px;padding:12px 18px;border:1px solid rgba(255,255,255,.15)}
+    .stat-val{font-family:'Lora',serif;font-size:1.7rem;font-weight:800}
+    .stat-lbl{font-size:.78rem;opacity:.75;margin-top:2px}
+    /* buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.87rem;padding:9px 18px;transition:all .15s;white-space:nowrap}
+    .btn:hover:not(:disabled){filter:brightness(1.07);transform:translateY(-1px)}
+    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none!important;filter:none!important}
+    .btn-primary{background:linear-gradient(135deg,#1a73c8,var(--mint));color:#fff;box-shadow:0 4px 14px rgba(13,148,136,.3)}
+    .btn-green{background:linear-gradient(135deg,var(--green),var(--mint));color:#fff;box-shadow:0 4px 14px rgba(22,163,74,.3)}
+    .btn-ghost{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;backdrop-filter:blur(4px)}
+    .btn-soft{background:var(--light);color:var(--slate)}
+    .btn-danger{background:var(--red);color:#fff}
+    .btn-prijavi{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#16a34a,#0d9488);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:.78rem;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;box-shadow:0 2px 8px rgba(22,163,74,.3)}
+    .btn-prijavi:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    .prisoten-badge{display:inline-flex;align-items:center;gap:5px;background:#dcfce7;color:#15803d;border-radius:8px;padding:4px 10px;font-size:.78rem;font-weight:700}
+    /* form */
+    .field-label{display:block;font-size:.75rem;font-weight:700;color:#4a6fa5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+    .field-input,.field-select{width:100%;padding:9px 13px;border-radius:9px;border:1.5px solid #c8daf0;font-size:.9rem;outline:none;background:#f8fbff;color:var(--navy);font-family:'DM Sans',sans-serif;transition:border-color .15s,box-shadow .15s}
+    .field-input:focus,.field-select:focus{border-color:var(--sky);box-shadow:0 0 0 3px rgba(59,158,221,.15)}
+    .field-select{cursor:pointer}
+    /* badge */
+    .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+    .badge-kajak{background:#e0f2fe;color:#0369a1}
+    .badge-staff{background:#dcfce7;color:#15803d}
+    .badge-cash{background:#fef9c3;color:#854d0e}
+    .badge-firm{background:#ede9fe;color:#6d28d9}
+    .badge-online{background:#dbeafe;color:#1d4ed8}
+    /* overlay/modal */
+    #overlay{position:fixed;inset:0;z-index:900;background:rgba(10,25,47,.55);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:16px}
+    #overlay.active{display:flex}
+    .modal{background:var(--white);border-radius:18px;box-shadow:0 24px 80px rgba(15,40,90,.22);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:fadeUp .25s ease both}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:22px 28px 18px;border-bottom:1px solid #e8f0f8}
+    .modal-head h2{font-family:'Lora',serif;font-size:1.1rem;color:var(--navy)}
+    .modal-body{padding:22px 28px 28px}
+    .prijava-info{background:var(--light);border-radius:12px;padding:14px 16px;margin-bottom:18px;border:1.5px solid var(--border)}
+    .prijava-name{font-family:'Lora',serif;font-size:1.15rem;font-weight:700;color:var(--navy)}
+    .prijava-sub{font-size:.8rem;color:var(--muted);margin-top:3px}
+    /* main */
+    main{max-width:1200px;margin:0 auto;padding:28px 16px 60px}
+    .status-bar{display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:.8rem}
+    .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+    /* tabs */
+    .tabs{display:flex;gap:4px;background:rgba(255,255,255,.7);border-radius:12px;padding:4px;border:1.5px solid var(--border);margin-bottom:18px;width:fit-content;backdrop-filter:blur(4px)}
+    .tab{padding:7px 20px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted)}
+    .tab.active{background:var(--white);color:var(--navy);font-weight:700;box-shadow:0 2px 8px rgba(15,40,90,.1)}
+    /* search */
+    .search-wrap{background:var(--white);border-radius:14px;box-shadow:0 2px 12px rgba(15,40,90,.08);padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;border:1.5px solid var(--border)}
+    .search-wrap input{flex:1;border:none;outline:none;font-size:.93rem;background:transparent;color:var(--navy);font-family:'DM Sans',sans-serif}
+    /* table */
+    .table-wrap{background:var(--white);border-radius:18px;box-shadow:0 2px 16px rgba(15,40,90,.09);border:1.5px solid var(--border);overflow-x:auto;animation:fadeUp .35s ease both}
+    table{width:100%;border-collapse:collapse}
+    thead tr{background:linear-gradient(90deg,#f0f7ff,#f0fdf4)}
+    th{padding:12px 14px;text-align:left;font-size:.73rem;font-weight:800;color:#4a6fa5;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid var(--border);white-space:nowrap}
+    td{padding:10px 14px;border-bottom:1px solid #f0f7ff}
+    tr:last-child td{border-bottom:none}
+    tbody tr{transition:background .12s}
+    tbody tr:hover{background:var(--light)}
+    .td-num{color:#94a3b8;font-size:.8rem;font-weight:600}
+    .td-name{font-weight:600;color:var(--navy)}
+    .td-muted{color:var(--slate);font-size:.85rem}
+    .td-addr{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .td-email{color:#0369a1;font-size:.85rem}
+    .table-foot{padding:12px 18px;border-top:1px solid #f0f7ff;color:#94a3b8;font-size:.8rem}
+    /* empty */
+    .empty-state{background:var(--white);border-radius:18px;padding:64px 24px;text-align:center;box-shadow:0 2px 12px rgba(15,40,90,.08);border:1.5px solid var(--border)}
+    /* toast */
+    #toast{position:fixed;bottom:28px;right:24px;z-index:2000;padding:12px 22px;border-radius:12px;color:#fff;font-weight:600;font-size:.9rem;box-shadow:0 8px 30px rgba(0,0,0,.2);display:none;align-items:center;gap:8px;max-width:340px}
+    /* animations */
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes floatWave{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    @media(max-width:700px){.stats-grid{grid-template-columns:1fr 1fr}.header-actions{flex-wrap:wrap;gap:8px}table{font-size:.78rem}.login-card{padding:32px 24px 28px}}
+  </style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div style="color:rgba(255,255,255,.7);font-size:.88rem">Preverjam prijavo…</div>
+</div>
+
+<div id="login-screen" style="display:none">
+  <div style="position:absolute;bottom:0;left:0;right:0;opacity:.12;pointer-events:none">
+    <svg viewBox="0 0 1440 120" preserveAspectRatio="none" width="100%" height="120">
+      <path d="M0 60 Q180 20 360 60 Q540 100 720 60 Q900 20 1080 60 Q1260 100 1440 60 L1440 120 L0 120Z" fill="white"/>
+    </svg>
+  </div>
+  <div style="position:absolute;top:12%;right:8%;animation:floatWave 4s ease-in-out infinite;opacity:.18;pointer-events:none">
+    <svg viewBox="0 0 64 32" fill="none" stroke="white" stroke-width="1.5" width="120" height="60">
+      <ellipse cx="32" cy="16" rx="30" ry="9" fill="white" stroke="none" opacity=".3"/>
+      <path d="M2 16 Q32 4 62 16" stroke-width="2.5"/>
+      <path d="M2 16 Q32 28 62 16" stroke-width="1.5" opacity=".5"/>
+      <line x1="32" y1="2" x2="32" y2="30" stroke-width="1.5"/>
+      <line x1="22" y1="7" x2="42" y2="7" stroke-width="2" stroke-linecap="round"/>
+      <line x1="22" y1="25" x2="42" y2="25" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:32px">
+      <div class="login-logo">
+        <svg viewBox="0 0 64 32" fill="none" stroke="white" stroke-width="2" width="56" height="28">
+          <ellipse cx="32" cy="16" rx="30" ry="9" fill="rgba(255,255,255,.2)" stroke="none"/>
+          <path d="M2 16 Q32 4 62 16" stroke-width="2.5"/>
+          <path d="M2 16 Q32 28 62 16" stroke-width="1.5" opacity=".6"/>
+          <line x1="32" y1="2" x2="32" y2="30" stroke-width="1.5"/>
+          <line x1="22" y1="7" x2="42" y2="7" stroke-width="2" stroke-linecap="round"/>
+          <line x1="22" y1="25" x2="42" y2="25" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.18em;color:#64748b;text-transform:uppercase;margin-bottom:6px">Krka</div>
+      <h1 style="font-family:'Lora',serif;font-size:1.55rem;font-weight:800;color:var(--navy);line-height:1.15">50. Jubilejni Spust</h1>
+      <p style="color:#64748b;font-size:.85rem;margin-top:8px">Prijava v sistem za organizatorje</p>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="field-label">E-naslov</label>
+      <div style="padding:9px 13px;border-radius:9px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#94a3b8;font-size:.9rem">organizator@abkatori.si</div>
+    </div>
+    <div style="margin-bottom:8px">
+      <label class="field-label">Geslo</label>
+      <div style="position:relative">
+        <input id="password-input" type="password" placeholder="Vpiši geslo…" autocomplete="current-password"
+          style="width:100%;padding:10px 42px 10px 13px;border-radius:9px;border:1.5px solid #c8daf0;font-size:.9rem;outline:none;background:#f8fbff;color:var(--navy);font-family:'DM Sans',sans-serif;box-sizing:border-box;transition:border-color .15s,box-shadow .15s"
+          onfocus="this.style.borderColor='var(--sky)';this.style.boxShadow='0 0 0 3px rgba(59,158,221,.18)'"
+          onblur="this.style.borderColor='#c8daf0';this.style.boxShadow='none'">
+        <button onclick="togglePassword()" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;display:flex;align-items:center;padding:2px">
+          <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="login-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:9px 13px;color:var(--red);font-size:.83rem;font-weight:600;margin-bottom:16px"></div>
+    <button id="login-btn" onclick="doLogin()"
+      style="width:100%;margin-top:20px;padding:12px;border-radius:11px;background:linear-gradient(135deg,#1a73c8,var(--mint));color:#fff;border:none;font-weight:800;font-size:1rem;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.03em;box-shadow:0 4px 16px rgba(13,148,136,.3);transition:all .18s"
+      onmouseover="this.style.filter='brightness(1.08)';this.style.transform='translateY(-1px)'"
+      onmouseout="this.style.filter='none';this.style.transform='none'">
+      Prijava →
+    </button>
+    <p style="text-align:center;color:#cbd5e1;font-size:.72rem;margin-top:20px">Sistem za interno upravljanje udeležencev</p>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <div style="position:absolute;bottom:0;left:0;right:0;height:40px;opacity:.25;pointer-events:none">
+      <svg viewBox="0 0 1440 40" preserveAspectRatio="none" width="100%" height="40">
+        <path d="M0 20 Q180 0 360 20 Q540 40 720 20 Q900 0 1080 20 Q1260 40 1440 20 L1440 40 L0 40Z" fill="white"/>
+      </svg>
+    </div>
+    <div class="header-inner">
+      <div class="header-top">
+        <div class="header-logo">
+          <svg viewBox="0 0 64 32" fill="none" stroke="white" stroke-width="2" width="40" height="20">
+            <ellipse cx="32" cy="16" rx="30" ry="9" fill="rgba(255,255,255,.2)" stroke="none"/>
+            <path d="M2 16 Q32 4 62 16" stroke-width="2.5"/>
+            <path d="M2 16 Q32 28 62 16" stroke-width="1.5" opacity=".5"/>
+            <line x1="32" y1="2" x2="32" y2="30" stroke-width="1.5"/>
+            <line x1="22" y1="7" x2="42" y2="7" stroke-width="2" stroke-linecap="round"/>
+            <line x1="22" y1="25" x2="42" y2="25" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:.75rem;font-weight:600;letter-spacing:.15em;opacity:.7;text-transform:uppercase">Spust po reki Krki</div>
+          <h1 style="font-family:'Lora',serif;font-size:clamp(1.4rem,4vw,2.1rem);font-weight:800;line-height:1.1;margin-top:2px">
+            50. Jubilejni Spust <span style="font-size:.6em;opacity:.65;font-weight:600">· 2026</span>
+          </h1>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-ghost" onclick="openImportModal()" id="import-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+            Uvozi bazo
+          </button>
+          <input id="file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this)">
+          <button class="btn btn-ghost" onclick="exportXLSX()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Izvozi 2026
+          </button>
+          <button class="btn" onclick="openBulkDeleteModal()" style="background:rgba(220,38,38,.18);border:1.5px solid rgba(220,38,38,.35);color:#fca5a5;backdrop-filter:blur(4px)" id="bulk-delete-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            Zbriši vse
+          </button>
+          <button class="btn btn-green" onclick="openAddModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Nov član
+          </button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="stat-letos" style="color:#34d399">0</div><div class="stat-lbl">Prijavljenih 2026</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-kajak" style="color:#60a5fa">0</div><div class="stat-lbl">Kajakaši 2026</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-staff" style="color:#a78bfa">0</div><div class="stat-lbl">Staff 2026</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-baza" style="color:#fbbf24">0</div><div class="stat-lbl">Skupaj v bazi</div></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="status-bar">
+      <span class="status-dot" id="status-dot" style="background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.2)"></span>
+      <span id="status-text" style="color:#92400e">Vzpostavljam povezavo…</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('prijava')" id="tab-prijava">🏁 Prijava na spust</button>
+      <button class="tab" onclick="setTab('baza')" id="tab-baza">📋 Baza članov</button>
+    </div>
+
+    <!-- TAB: PRIJAVA -->
+    <div id="view-prijava">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="search-prijava" placeholder="Poišči člana po imenu ali priimku…" oninput="renderPrijava()" autocomplete="off">
+        <span id="sp-count" style="font-size:.8rem;color:#64748b;flex-shrink:0;display:none"></span>
+        <button onclick="document.getElementById('search-prijava').value='';renderPrijava()" style="background:none;border:none;cursor:pointer;color:#94a3b8;display:flex;align-items:center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="p-hint" class="empty-state">
+        <div style="font-size:2.5rem;margin-bottom:12px">🛶</div>
+        <div style="font-family:'Lora',serif;font-size:1.2rem;font-weight:700;color:var(--navy);margin-bottom:8px">Poišči udeleženca</div>
+        <div style="color:#64748b;font-size:.9rem">Vpiši ime ali priimek, nato pritisni <strong>Prijavi</strong> ob osebi.</div>
+      </div>
+      <div id="p-empty" class="empty-state" style="display:none">
+        <div style="font-size:2.5rem;margin-bottom:12px">🔍</div>
+        <div style="font-family:'Lora',serif;font-size:1.2rem;font-weight:700;color:var(--navy);margin-bottom:8px">Nihče ni najden</div>
+        <div style="color:#64748b;font-size:.9rem">Preveri črkovanje ali dodaj novega člana.</div>
+      </div>
+      <div id="p-table" class="table-wrap" style="display:none">
+        <table>
+          <thead><tr><th>Ime</th><th>Priimek</th><th>Telefon</th><th>E-mail</th><th>Status 2026</th><th>Plačilo</th><th></th><th></th></tr></thead>
+          <tbody id="p-tbody"></tbody>
+        </table>
+        <div class="table-foot" id="p-foot"></div>
+      </div>
+    </div>
+
+    <!-- TAB: BAZA -->
+    <div id="view-baza" style="display:none">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="search-baza" placeholder="Išči po imenu, priimku, e-mailu…" oninput="renderBaza()" autocomplete="off">
+        <span id="sb-count" style="font-size:.8rem;color:#64748b;flex-shrink:0;display:none"></span>
+        <button onclick="document.getElementById('search-baza').value='';renderBaza()" style="background:none;border:none;cursor:pointer;color:#94a3b8;display:flex;align-items:center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="b-empty" class="empty-state" style="display:none">
+        <div style="font-size:3rem;margin-bottom:12px">🛶</div>
+        <div style="font-family:'Lora',serif;font-size:1.3rem;font-weight:700;color:var(--navy);margin-bottom:8px">Baza je prazna</div>
+        <div style="color:#64748b;font-size:.92rem">Uvozi Excel datoteko ali dodaj novega člana.</div>
+      </div>
+      <div id="b-table" class="table-wrap" style="display:none">
+        <table>
+          <thead><tr><th>#</th><th>Ime</th><th>Priimek</th><th>Naslov</th><th>Telefon</th><th>E-mail</th><th>2026</th><th></th></tr></thead>
+          <tbody id="b-tbody"></tbody>
+        </table>
+        <div class="table-foot" id="b-foot"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer style="text-align:center;padding:20px;font-size:.75rem;color:#cbd5e1;border-top:1px solid #e2e8f0">
+    <span style="color:#94a3b8">50. Jubilejni Spust po Krki · 2026</span>
+    <button onclick="doLogout()" title="Odjava"
+      style="margin-left:16px;background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:.72rem;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:4px;opacity:0;transition:opacity .2s;vertical-align:middle"
+      onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Odjava
+    </button>
+  </footer>
+</div>
+
+<!-- OVERLAY -->
+<div id="overlay" onclick="overlayClick(event)">
+  <!-- Prijava modal -->
+  <div class="modal" id="modal-prijava" style="display:none">
+    <div class="modal-head">
+      <h2>✅ Prijava na spust 2026</h2>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#64748b;display:flex;padding:4px;border-radius:50%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="prijava-info">
+        <div class="prijava-name" id="pr-name"></div>
+        <div class="prijava-sub"  id="pr-sub"></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="field-label">Vloga</label>
+        <select id="pr-vloga" class="field-select">
+          <option>Kajakaš</option>
+          <option>Staff</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="field-label">Način plačila</label>
+        <select id="pr-placilo" class="field-select" onchange="togglePrFirma()">
+          <option>Gotovina</option>
+          <option>Staff</option>
+          <option>Firma</option>
+          <option>Prek spleta</option>
+        </select>
+      </div>
+      <div id="pr-firma-row" style="display:none;margin-bottom:16px">
+        <label class="field-label">Ime firme</label>
+        <input id="pr-firma" class="field-input" type="text">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button id="pr-confirm-btn" class="btn btn-green" style="flex:1;justify-content:center;font-size:.95rem" onclick="confirmPrijava()">
+          ✓ Potrdi prijavo
+        </button>
+        <button class="btn btn-soft" onclick="closeModal()">Prekliči</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit member modal -->
+  <div class="modal" id="modal-form" style="display:none">
+    <div class="modal-head">
+      <h2 id="modal-form-title">Nov član</h2>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#64748b;display:flex;padding:4px;border-radius:50%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div><label class="field-label">Ime</label><input id="f-ime" class="field-input" type="text"></div>
+          <div><label class="field-label">Priimek</label><input id="f-priimek" class="field-input" type="text"></div>
+        </div>
+        <div><label class="field-label">Naslov</label><input id="f-naslov" class="field-input" type="text"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div><label class="field-label">Telefon</label><input id="f-telefon" class="field-input" type="tel"></div>
+          <div><label class="field-label">E-mail</label><input id="f-email" class="field-input" type="email"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button id="save-btn" class="btn btn-primary" style="flex:1;justify-content:center" onclick="saveMember()">Shrani v bazo</button>
+          <button class="btn btn-soft" onclick="closeModal()">Prekliči</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk delete modal -->
+  <div class="modal" id="modal-bulk-delete" style="display:none;max-width:440px">
+    <div class="modal-head">
+      <h2>🗑️ Zbriši celotno bazo</h2>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#64748b;display:flex;padding:4px;border-radius:50%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:14px 16px;margin-bottom:18px">
+        <div style="font-weight:700;color:var(--red);margin-bottom:6px;font-size:.92rem">⚠️ Nepovraten izbris</div>
+        <div style="color:#991b1b;font-size:.84rem;line-height:1.6" id="bulk-delete-info"></div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="field-label">Za potrditev vpiši: <strong style="color:var(--red);letter-spacing:.05em">ZBRIŠI VSE</strong></label>
+        <input id="bulk-confirm-input" class="field-input" type="text" placeholder="ZBRIŠI VSE" oninput="checkBulkConfirm()">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button id="bulk-delete-confirm-btn" class="btn btn-danger" style="flex:1;justify-content:center;opacity:.4;pointer-events:none" onclick="confirmBulkDelete()">
+          Zbriši vse zapise
+        </button>
+        <button class="btn btn-soft" onclick="closeModal()">Prekliči</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import instructions modal -->
+  <div class="modal" id="modal-import" style="display:none;max-width:560px">
+    <div class="modal-head">
+      <h2>📥 Uvoz baze iz Excel / CSV</h2>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#64748b;display:flex;padding:4px;border-radius:50%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <p style="color:var(--slate);font-size:.88rem;line-height:1.6;margin-bottom:18px">
+        Datoteka mora imeti <strong>prvi vrstico z naslovi stolpcev</strong>. Spodaj so vsa sprejeta imena — zadostuje <em>katerokoli</em> od navedenih.
+      </p>
+
+      <!-- Column guide table -->
+      <div style="border-radius:12px;overflow:hidden;border:1.5px solid var(--border);margin-bottom:20px;font-size:.82rem">
+        <div style="display:grid;grid-template-columns:1fr 1.6fr;background:linear-gradient(90deg,#f0f7ff,#f0fdf4)">
+          <div style="padding:9px 14px;font-weight:800;color:#4a6fa5;text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;border-bottom:2px solid var(--border)">Polje</div>
+          <div style="padding:9px 14px;font-weight:800;color:#4a6fa5;text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;border-bottom:2px solid var(--border)">Sprejeta imena stolpca</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1.6fr;border-bottom:1px solid #f0f7ff">
+          <div style="padding:9px 14px;font-weight:700;color:var(--navy)">Ime</div>
+          <div style="padding:9px 14px;color:var(--slate)"><code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">ime</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">name</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">first</code></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1.6fr;border-bottom:1px solid #f0f7ff;background:#fafcff">
+          <div style="padding:9px 14px;font-weight:700;color:var(--navy)">Priimek</div>
+          <div style="padding:9px 14px;color:var(--slate)"><code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">priimek</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">surname</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">last</code></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1.6fr;border-bottom:1px solid #f0f7ff">
+          <div style="padding:9px 14px;font-weight:700;color:var(--navy)">Naslov</div>
+          <div style="padding:9px 14px;color:var(--slate)"><code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">naslov</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">address</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">addr</code></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1.6fr;border-bottom:1px solid #f0f7ff;background:#fafcff">
+          <div style="padding:9px 14px;font-weight:700;color:var(--navy)">Telefon</div>
+          <div style="padding:9px 14px;color:var(--slate)"><code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">telefon</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">tel</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">phone</code></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1.6fr">
+          <div style="padding:9px 14px;font-weight:700;color:var(--navy)">E-mail</div>
+          <div style="padding:9px 14px;color:var(--slate)"><code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">email</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">mail</code> <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px">e-mail</code></div>
+        </div>
+      </div>
+
+      <!-- Example row -->
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:.81rem">
+        <div style="font-weight:700;color:#15803d;margin-bottom:6px">✅ Primer pravilne vrstice:</div>
+        <div style="font-family:monospace;color:#166534;overflow-x:auto;white-space:nowrap">
+          ime | priimek | naslov | telefon | email<br>
+          Janez | Novak | Cesta 1, Ljubljana | 041123456 | janez@email.si
+        </div>
+      </div>
+
+      <div style="background:#fef9c3;border:1.5px solid #fde68a;border-radius:10px;padding:11px 16px;margin-bottom:22px;font-size:.81rem;color:#854d0e">
+        <strong>💡 Nasveti:</strong> Vrstni red stolpcev ni pomemben. Velika/mala črka v naslovu stolpca prav tako ne. Prazne vrstice se preskočijo. Sprejeto: <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.csv</strong>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-green" style="flex:1;justify-content:center;font-size:.95rem" onclick="closeModal();document.getElementById('file-input').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+          Razumem — izberi datoteko
+        </button>
+        <button class="btn btn-soft" onclick="closeModal()">Prekliči</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete modal -->
+  <div class="modal" id="modal-delete" style="display:none">
+    <div class="modal-head">
+      <h2>Potrdi brisanje</h2>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#64748b;display:flex;padding:4px;border-radius:50%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--slate);margin-bottom:20px;line-height:1.6" id="del-msg"></p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-danger" style="flex:1;justify-content:center" onclick="confirmDelete()">Izbriši iz baze</button>
+        <button class="btn btn-soft" onclick="closeModal()">Prekliči</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const FIREBASE_CONFIG={apiKey:"AIzaSyBj91Ujqe1U6fArLZNS6nIsoX02PV_X5HM",authDomain:"spust-po-krki-prijava.firebaseapp.com",projectId:"spust-po-krki-prijava",storageBucket:"spust-po-krki-prijava.firebasestorage.app",messagingSenderId:"861034960706",appId:"1:861034960706:web:df868320fee0c6ffb81adb"};
+const EMAIL="organizator@abkatori.si";
+const LETO=2026;
+const COL="udelezenci";
+
+let db=null, members=[], prijavaId=null, deleteId=null;
+
+// ── Firebase init ──
+function initFirebase(){
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.firestore();
+    firebase.auth().onAuthStateChanged(async user=>{
+      if(user){ showApp(); setStatus(true); await loadMembers(); }
+      else showLogin();
+    });
+  }catch(e){ console.error(e); showLogin(); }
+}
+
+function setStatus(ok){
+  const dot=document.getElementById('status-dot'), txt=document.getElementById('status-text');
+  if(ok){ dot.style.cssText='width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.2)'; txt.style.color='#15803d'; txt.textContent='Povezan s Firebase Firestore'; }
+  else  { dot.style.cssText='width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.2)'; txt.style.color='#92400e'; txt.textContent='Lokalni način'; }
+}
+
+// ── Auth ──
+async function doLogin(){
+  const btn=document.getElementById('login-btn'), pwd=document.getElementById('password-input').value.trim();
+  if(!pwd){showLoginErr('Vpiši geslo.');return;}
+  btn.disabled=true; btn.textContent='Prijavljam…'; document.getElementById('login-error').style.display='none';
+  try{ await firebase.auth().signInWithEmailAndPassword(EMAIL,pwd); }
+  catch(e){
+    btn.disabled=false; btn.textContent='Prijava →';
+    const m={'auth/wrong-password':'Napačno geslo.','auth/invalid-credential':'Napačno geslo.','auth/too-many-requests':'Preveč poskusov.','auth/network-request-failed':'Ni povezave.'};
+    showLoginErr(m[e.code]||'Napaka: '+(e.message||e.code));
+  }
+}
+async function doLogout(){ await firebase.auth().signOut(); members=[]; showLogin(); }
+function showLoginErr(msg){ const el=document.getElementById('login-error'); el.style.display='block'; el.innerHTML='⚠️ '+msg; }
+document.getElementById('password-input').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+function togglePassword(){
+  const i=document.getElementById('password-input'), ic=document.getElementById('eye-icon');
+  if(i.type==='password'){ i.type='text'; ic.innerHTML='<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'; }
+  else{ i.type='password'; ic.innerHTML='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'; }
+}
+
+// ── Screens ──
+function showLogin(){ document.getElementById('loading-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; document.getElementById('app').style.display='none'; const b=document.getElementById('login-btn'); b.disabled=false; b.textContent='Prijava →'; }
+function showApp(){   document.getElementById('loading-screen').style.display='none'; document.getElementById('login-screen').style.display='none'; document.getElementById('app').style.display='block'; }
+
+// ── Tabs ──
+function setTab(t){
+  document.getElementById('tab-prijava').classList.toggle('active',t==='prijava');
+  document.getElementById('tab-baza').classList.toggle('active',t==='baza');
+  document.getElementById('view-prijava').style.display=t==='prijava'?'block':'none';
+  document.getElementById('view-baza').style.display=t==='baza'?'block':'none';
+}
+
+// ── Firestore ──
+async function loadMembers(){
+  try{
+    const snap=await db.collection(COL).get();
+    members=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderAll();
+  }catch(e){ showToast('Napaka pri branju.','error'); }
+}
+
+// ── Helpers ──
+function getLeto(m){ return m.spusti&&m.spusti[LETO]?m.spusti[LETO]:null; }
+function isPrisoten(m){ return !!getLeto(m); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function badgeCls(t){ return {'Kajakaš':'badge-kajak','Staff':'badge-staff','Gotovina':'badge-cash','Firma':'badge-firm','Prek spleta':'badge-online'}[t]||''; }
+function norm(s){ return String(s||'').toLowerCase(); }
+function matches(m,q){ return ['ime','priimek','email','telefon','naslov'].some(k=>norm(m[k]).includes(q)); }
+
+// ── Stats ──
+function updateStats(){
+  const pr=members.filter(isPrisoten);
+  document.getElementById('stat-letos').textContent=pr.length;
+  document.getElementById('stat-kajak').textContent=pr.filter(m=>getLeto(m)?.vloga==='Kajakaš').length;
+  document.getElementById('stat-staff').textContent=pr.filter(m=>getLeto(m)?.vloga==='Staff').length;
+  document.getElementById('stat-baza').textContent=members.length;
+}
+
+// ── Render PRIJAVA tab ──
+function renderPrijava(){
+  const q=norm(document.getElementById('search-prijava').value);
+  const hint=document.getElementById('p-hint'), empty=document.getElementById('p-empty'), tbl=document.getElementById('p-table'), cnt=document.getElementById('sp-count');
+  if(!q){ hint.style.display='block'; empty.style.display='none'; tbl.style.display='none'; cnt.style.display='none'; return; }
+  const f=members.filter(m=>matches(m,q));
+  if(!f.length){ hint.style.display='none'; empty.style.display='block'; tbl.style.display='none'; cnt.textContent='0 zadetkov'; cnt.style.display='inline'; return; }
+  hint.style.display='none'; empty.style.display='none'; tbl.style.display='block';
+  cnt.textContent=f.length+' zadetk'+(f.length===1?'':f.length<5?'i':'ov'); cnt.style.display='inline';
+  document.getElementById('p-tbody').innerHTML=f.map(m=>{
+    const l=getLeto(m), pr=!!l;
+    return `<tr>
+      <td class="td-name">${esc(m.ime)}</td>
+      <td class="td-name">${esc(m.priimek)}</td>
+      <td class="td-muted" style="white-space:nowrap">${esc(m.telefon)}</td>
+      <td class="td-email">${esc(m.email)}</td>
+      <td>${pr?`<span class="prisoten-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>Prijavljen</span>`:'<span style="color:#cbd5e1">–</span>'}</td>
+      <td>${pr?`<span class="badge ${badgeCls(l.placilo)}">${esc(l.placilo)}</span>`:'<span style="color:#cbd5e1">–</span>'}</td>
+      <td>${pr?`<span style="color:#94a3b8;font-size:.75rem">✓ 2026</span>`:`<button class="btn-prijavi" onclick="openPrijavaModal('${m.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>Prijavi</button>`}</td>
+      <td><button onclick="openEditModal('${m.id}')" title="Uredi podatke"
+        style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;padding:4px 7px;border-radius:7px;cursor:pointer;display:flex;align-items:center;transition:filter .15s"
+        onmouseover="this.style.filter='brightness(.93)'" onmouseout="this.style.filter='none'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('p-foot').textContent='Prikazano '+f.length+' od '+members.length+' članov';
+}
+
+// ── Render BAZA tab ──
+function renderBaza(){
+  const q=norm(document.getElementById('search-baza').value);
+  const f=q?members.filter(m=>matches(m,q)):members;
+  const cnt=document.getElementById('sb-count');
+  if(q){ cnt.textContent=f.length+' zadetk'+(f.length===1?'':f.length<5?'i':'ov'); cnt.style.display='inline'; } else { cnt.style.display='none'; }
+  const empty=document.getElementById('b-empty'), tbl=document.getElementById('b-table');
+  if(!members.length){ empty.style.display='block'; tbl.style.display='none'; return; }
+  empty.style.display='none'; tbl.style.display='block';
+  document.getElementById('b-tbody').innerHTML=f.map((m,i)=>{
+    const l=getLeto(m), pr=!!l;
+    return `<tr>
+      <td class="td-num">${i+1}</td>
+      <td class="td-name">${esc(m.ime)}</td>
+      <td class="td-name">${esc(m.priimek)}</td>
+      <td class="td-muted td-addr" title="${esc(m.naslov)}">${esc(m.naslov)}</td>
+      <td class="td-muted" style="white-space:nowrap">${esc(m.telefon)}</td>
+      <td class="td-email">${esc(m.email)}</td>
+      <td>${pr?`<span class="prisoten-badge" style="font-size:.71rem;padding:3px 8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg>${esc(l.placilo)}</span>`:'<span style="color:#cbd5e1;font-size:.8rem">–</span>'}</td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${!pr?`<button class="btn-prijavi" style="font-size:.73rem;padding:4px 9px" onclick="openPrijavaModal('${m.id}')">Prijavi</button>`:''}
+          <button onclick="openEditModal('${m.id}')" title="Uredi podatke"
+            style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;padding:4px 7px;border-radius:7px;cursor:pointer;display:flex;align-items:center;transition:filter .15s"
+            onmouseover="this.style.filter='brightness(.93)'" onmouseout="this.style.filter='none'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button onclick="openDeleteModal('${m.id}')" title="Izbriši iz baze"
+            style="background:#fef2f2;border:1px solid #fecaca;color:var(--red);padding:4px 7px;border-radius:7px;cursor:pointer;display:flex;align-items:center;transition:filter .15s"
+            onmouseover="this.style.filter='brightness(.93)'" onmouseout="this.style.filter='none'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('b-foot').textContent='Prikazano '+f.length+' od '+members.length+' članov';
+}
+
+function renderAll(){ updateStats(); renderPrijava(); renderBaza(); }
+
+// ── Prijava modal ──
+function openPrijavaModal(id){
+  const m=members.find(x=>x.id===id); if(!m) return;
+  prijavaId=id;
+  document.getElementById('pr-name').textContent=m.ime+' '+m.priimek;
+  document.getElementById('pr-sub').textContent=[m.email,m.telefon].filter(Boolean).join(' · ');
+  document.getElementById('pr-vloga').value='Kajakaš';
+  document.getElementById('pr-placilo').value='Gotovina';
+  document.getElementById('pr-firma').value='';
+  togglePrFirma();
+  showModal('modal-prijava');
+}
+function togglePrFirma(){ document.getElementById('pr-firma-row').style.display=document.getElementById('pr-placilo').value==='Firma'?'block':'none'; }
+async function confirmPrijava(){
+  const btn=document.getElementById('pr-confirm-btn');
+  btn.disabled=true; btn.textContent='Shranjujem…';
+  const payload={ placilo:document.getElementById('pr-placilo').value, vloga:document.getElementById('pr-vloga').value, firma:document.getElementById('pr-firma').value.trim(), ts:Date.now() };
+  try{
+    if(db) await db.collection(COL).doc(prijavaId).update({[`spusti.${LETO}`]:payload});
+    members=members.map(m=>m.id!==prijavaId?m:{...m,spusti:{...(m.spusti||{}),[LETO]:payload}});
+    showToast('Prijavljeno na spust 2026 ✓');
+    closeModal(); renderAll();
+  }catch(e){ showToast('Napaka pri prijavi.','error'); }
+  btn.disabled=false; btn.textContent='✓ Potrdi prijavo';
+}
+
+// ── Add / Edit member ──
+let editId = null;
+
+function openAddModal(){
+  editId=null;
+  ['f-ime','f-priimek','f-naslov','f-telefon','f-email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modal-form-title').textContent='➕ Nov član v bazi';
+  document.getElementById('save-btn').textContent='Shrani v bazo';
+  showModal('modal-form');
+}
+
+function openEditModal(id){
+  const m=members.find(x=>x.id===id); if(!m) return;
+  editId=id;
+  document.getElementById('f-ime').value     = m.ime     || '';
+  document.getElementById('f-priimek').value = m.priimek || '';
+  document.getElementById('f-naslov').value  = m.naslov  || '';
+  document.getElementById('f-telefon').value = m.telefon || '';
+  document.getElementById('f-email').value   = m.email   || '';
+  document.getElementById('modal-form-title').textContent = '✏️ Uredi – '+m.ime+' '+m.priimek;
+  document.getElementById('save-btn').textContent='Shrani spremembe';
+  showModal('modal-form');
+}
+
+async function saveMember(){
+  const data={
+    ime:     document.getElementById('f-ime').value.trim(),
+    priimek: document.getElementById('f-priimek').value.trim(),
+    naslov:  document.getElementById('f-naslov').value.trim(),
+    telefon: document.getElementById('f-telefon').value.trim(),
+    email:   document.getElementById('f-email').value.trim(),
+  };
+  const btn=document.getElementById('save-btn'); btn.disabled=true; btn.textContent='Shranjujem…';
+  try{
+    if(editId){
+      // preserve existing spusti data
+      const existing=members.find(m=>m.id===editId);
+      const updated={...data, spusti: existing?.spusti||{}};
+      if(db) await db.collection(COL).doc(editId).set(updated);
+      members=members.map(m=>m.id===editId?{...updated,id:editId}:m);
+      showToast('Podatki posodobljeni ✓');
+    } else {
+      const newDoc={...data, spusti:{}};
+      if(db){ const ref=await db.collection(COL).add(newDoc); members.push({...newDoc,id:ref.id}); }
+      else   members.push({...newDoc,id:Date.now().toString()});
+      showToast('Član dodan ✓');
+    }
+    closeModal(); renderAll();
+  }catch(e){ showToast('Napaka.','error'); }
+  btn.disabled=false; btn.textContent=editId?'Shrani spremembe':'Shrani v bazo';
+}
+
+// ── Delete ──
+function openDeleteModal(id){
+  const m=members.find(x=>x.id===id); if(!m) return;
+  deleteId=id;
+  document.getElementById('del-msg').innerHTML='Ali res želiš <strong>trajno izbrisati</strong> '+esc(m.ime)+' '+esc(m.priimek)+' iz baze?';
+  showModal('modal-delete');
+}
+async function confirmDelete(){
+  try{
+    if(db) await db.collection(COL).doc(deleteId).delete();
+    members=members.filter(m=>m.id!==deleteId);
+    showToast('Član izbrisan.'); closeModal(); renderAll();
+  }catch(e){ showToast('Napaka pri brisanju.','error'); }
+}
+
+// ── Bulk delete ──
+function openBulkDeleteModal(){
+  if(!members.length){ showToast('Baza je že prazna.','warn'); return; }
+  document.getElementById('bulk-confirm-input').value='';
+  document.getElementById('bulk-delete-info').innerHTML=
+    `To bo trajno zbrisalo <strong>${members.length} zapisov</strong> iz baze in iz Firestore. Tega ni mogoče razveljaviti.`;
+  const btn=document.getElementById('bulk-delete-confirm-btn');
+  btn.style.opacity='.4'; btn.style.pointerEvents='none';
+  showModal('modal-bulk-delete');
+}
+function checkBulkConfirm(){
+  const ok=document.getElementById('bulk-confirm-input').value.trim()==='ZBRIŠI VSE';
+  const btn=document.getElementById('bulk-delete-confirm-btn');
+  btn.style.opacity=ok?'1':'.4';
+  btn.style.pointerEvents=ok?'auto':'none';
+}
+async function confirmBulkDelete(){
+  const btn=document.getElementById('bulk-delete-confirm-btn');
+  btn.disabled=true; btn.textContent='Brišem…';
+  try{
+    if(db){
+      const snap=await db.collection(COL).get();
+      const batch=db.batch();
+      snap.docs.forEach(d=>batch.delete(d.ref));
+      await batch.commit();
+    }
+    const n=members.length;
+    members=[];
+    showToast(n+' zapisov zbrisanih ✓');
+    closeModal(); renderAll();
+  }catch(e){ showToast('Napaka pri brisanju.','error'); }
+  btn.disabled=false; btn.textContent='Zbriši vse zapise';
+}
+
+// ── Import modal ──
+function openImportModal(){ showModal('modal-import'); }
+
+// ── Modal helpers ──
+function showModal(id){ ['modal-prijava','modal-form','modal-delete','modal-import','modal-bulk-delete'].forEach(mid=>document.getElementById(mid).style.display=mid===id?'block':'none'); document.getElementById('overlay').classList.add('active'); }
+function closeModal(){ document.getElementById('overlay').classList.remove('active'); ['modal-prijava','modal-form','modal-delete','modal-import','modal-bulk-delete'].forEach(mid=>document.getElementById(mid).style.display='none'); prijavaId=null; deleteId=null; }
+function overlayClick(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
+
+// ── Excel ──
+async function importExcel(input){
+  const file=input.files?.[0]; if(!file) return;
+  const btn=document.getElementById('import-btn'); btn.disabled=true;
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',codepage:1250});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    const find=(r,...keys)=>{ const k=Object.keys(r).find(k=>keys.some(n=>norm(k).includes(norm(n)))); return String(k?r[k]:''); };
+    const mapped=rows.map(r=>({ime:find(r,'ime','name','first'),priimek:find(r,'priimek','surname','last'),naslov:find(r,'naslov','address','addr'),telefon:find(r,'telefon','tel','phone'),email:find(r,'email','mail'),spusti:{}})).filter(r=>r.ime||r.priimek);
+    if(!mapped.length){ showToast('Ni prepoznanih podatkov.','warn'); btn.disabled=false; input.value=''; return; }
+    let n=0;
+    for(const m of mapped){
+      if(db){ const ref=await db.collection(COL).add(m); members.push({...m,id:ref.id}); }
+      else members.push({...m,id:Date.now().toString()+n});
+      n++;
+    }
+    showToast(n+' članov uvoženih ✓'); renderAll();
+  }catch(e){ showToast('Napaka pri branju datoteke.','error'); }
+  btn.disabled=false; input.value='';
+}
+
+function exportXLSX(){
+  const rows=members.filter(isPrisoten).map(m=>{ const l=getLeto(m); return {Ime:m.ime,Priimek:m.priimek,Naslov:m.naslov,Telefon:m.telefon,'E-mail':m.email,Vloga:l?.vloga,'Plačilo':l?.placilo,Firma:l?.firma||''}; });
+  if(!rows.length){ showToast('Ni prijavljenih za 2026.','warn'); return; }
+  const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Prijavljeni 2026');
+  XLSX.writeFile(wb,'abkatori_spust_2026.xlsx');
+  showToast('Izvoz 2026 ✓');
+}
+
+// ── Toast ──
+let _tt=null;
+function showToast(msg,type='success'){
+  const el=document.getElementById('toast');
+  el.style.background={'success':'var(--mint)','error':'var(--red)','warn':'var(--amber)'}[type]||'var(--mint)';
+  el.innerHTML='<span>'+{'success':'✅','error':'❌','warn':'⚠️'}[type]+'</span> '+msg;
+  el.style.display='flex'; el.style.animation='none'; void el.offsetWidth; el.style.animation='slideIn .25s ease both';
+  clearTimeout(_tt); _tt=setTimeout(()=>{ el.style.display='none'; },3200);
+}
+
+// ── Boot ──
+window.addEventListener('DOMContentLoaded',()=>{ setTab('prijava'); initFirebase(); });
+</script>
+</body>
+</html>
